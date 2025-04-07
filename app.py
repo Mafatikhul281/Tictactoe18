@@ -39,6 +39,7 @@ def handle_join(data):
     rooms[room]["players"].append(request.sid)
     emit("room_joined", room)
     socketio.emit("start_game", room=room)
+    del rooms[room]  # Hapus room setelah game dimulai
 
 @socketio.on("get_symbol")
 def assign_symbol(data):
@@ -52,7 +53,9 @@ def assign_symbol(data):
 def handle_move(data):
     room = data["room"]
     i, j = data["row"], data["col"]
-    game = rooms[room]
+    game = rooms.get(room)
+    if not game:
+        return
     board = game["board"]
     if board[i][j] == "":
         board[i][j] = game["turn"]
