@@ -3,10 +3,9 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO, emit, join_room
 import eventlet
 from flask import request
-import os
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='eventlet')
 
 ROOM = "main_room"
 players = []
@@ -65,6 +64,8 @@ def check_win(row, col, player):
         if count >= 5:
             return True
     return False
+
+import os
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
