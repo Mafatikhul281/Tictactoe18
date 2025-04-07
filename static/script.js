@@ -1,69 +1,43 @@
-
 const socket = io();
-let playerSymbol = null;
-let currentTurn = "X";
+let roomName = "";
 
-const board = document.getElementById("board");
-const info = document.getElementById("info");
-
-function createBoard() {
-    board.innerHTML = "";
-    for (let i = 0; i < 18; i++) {
-        for (let j = 0; j < 18; j++) {
-            const cell = document.createElement("div");
-            cell.className = "cell";
-            cell.dataset.row = i;
-            cell.dataset.col = j;
-            cell.addEventListener("click", handleClick);
-            board.appendChild(cell);
-        }
-    }
+function createRoom() {
+  const input = document.getElementById("roomInput").value.trim();
+  if (!input) return alert("Masukkan nama room!");
+  roomName = input;
+  socket.emit("create_room", { room: roomName });
 }
 
-function handleClick(e) {
-    if (!playerSymbol) return;
-    const row = e.target.dataset.row;
-    const col = e.target.dataset.col;
-    if (e.target.textContent !== "") return;
-    if (playerSymbol !== currentTurn) return;
-
-    socket.emit("move", { row: parseInt(row), col: parseInt(col), player: playerSymbol });
+function joinRoom(name) {
+  roomName = name;
+  socket.emit("join_room", { room: roomName });
 }
 
-function resetBoard() {
-    socket.emit("reset");
-}
+socket.on("room_created", (room) => {
+  console.log("Room dibuat:", room);
+});
 
-socket.on("player_assigned", symbol => {
-    playerSymbol = symbol;
-    info.textContent = `You are Player ${symbol}`;
+socket.on("room_joined", (room) => {
+  console.log("Berhasil join:", room);
 });
 
 socket.on("start_game", () => {
-    info.textContent = "Game started!";
+  alert("Game dimulai di room: " + roomName);
+  // Mulai logika game-mu di sini
 });
 
-socket.on("update_cell", data => {
-    const { row, col, player } = data;
-    const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
-    cell.textContent = player;
-    currentTurn = player === "X" ? "O" : "X";
-    if (playerSymbol === currentTurn) {
-        info.textContent = "Your turn";
-    } else {
-        info.textContent = "Opponent's turn";
-    }
+socket.on("room_list", (roomList) => {
+  const listEl = document.getElementById("roomList");
+  listEl.innerHTML = "";
+  roomList.forEach(room => {
+    const btn = document.createElement("button");
+    btn.textContent = `Gabung ${room}`;
+    btn.onclick = () => joinRoom(room);
+    listEl.appendChild(btn);
+    listEl.appendChild(document.createElement("br"));
+  });
 });
 
-socket.on("game_over", msg => {
-    info.textContent = msg;
+socket.on("error", (msg) => {
+  alert(msg);
 });
-
-socket.on("reset_board", () => {
-    createBoard();
-    currentTurn = "X";
-    info.textContent = `Game reset. You are Player ${playerSymbol}`;
-});
-
-createBoard();
-socket.emit("join");
