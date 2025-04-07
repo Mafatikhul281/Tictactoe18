@@ -26,6 +26,7 @@ socket.on("room_joined", (room) => {
 
 socket.on("start_game", () => {
   document.getElementById("menu").style.display = "none";
+  document.getElementById("surrenderBtn").style.display = "inline-block";
   socket.emit("get_symbol", { room: roomName });
   document.getElementById("gameBoard").innerHTML = "";
   renderBoard();
@@ -41,6 +42,12 @@ socket.on("update_board", ({ board: newBoard, nextTurn }) => {
   board = newBoard;
   isMyTurn = playerSymbol === nextTurn;
   renderBoard();
+});
+
+socket.on("game_over", ({ winner }) => {
+  alert(`Game selesai! Pemenang: ${winner}`);
+  isMyTurn = false;
+  document.getElementById("surrenderBtn").style.display = "none";
 });
 
 socket.on("room_list", (roomList) => {
@@ -63,8 +70,6 @@ function renderBoard() {
   const boardDiv = document.getElementById("gameBoard");
   boardDiv.innerHTML = "";
   const table = document.createElement("table");
-  table.style.borderCollapse = "collapse";
-  table.style.margin = "auto";
 
   for (let i = 0; i < 18; i++) {
     const row = document.createElement("tr");
@@ -86,4 +91,10 @@ function renderBoard() {
 function handleClick(i, j) {
   if (!isMyTurn || board[i][j] !== "") return;
   socket.emit("make_move", { room: roomName, row: i, col: j });
+}
+
+function surrender() {
+  if (confirm("Yakin mau menyerah?")) {
+    socket.emit("surrender", { room: roomName, symbol: playerSymbol });
+  }
 }
