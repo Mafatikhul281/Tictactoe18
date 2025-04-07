@@ -29,6 +29,7 @@ def handle_create(data):
     emit("room_created", room)
     emit("room_list", list(rooms.keys()), broadcast=True)
 
+#777
 @socketio.on("join_room")
 def handle_join(data):
     room = data["room"]
