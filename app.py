@@ -1,54 +1,63 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit, join_room, leave_room
-from flask_cors import CORS
-import os
+from flask import Flask, render_template, request
+from flask_socketio import SocketIO, join_room, emit
 
 app = Flask(__name__)
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(app)
 
-rooms = {}  # {room_name: [sid1, sid2]}
+rooms = {}
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
+@socketio.on("connect")
+def handle_connect():
+    emit("room_list", list(rooms.keys()))
+
 @socketio.on("create_room")
-def create_room(data):
-    room_name = data["room"]
-    if room_name in rooms:
-        emit("error", "Room sudah ada.")
+def handle_create(data):
+    room = data["room"]
+    if room in rooms:
+        emit("error", "Room sudah ada")
         return
-    join_room(room_name)
-    rooms[room_name] = [request.sid]
-    emit("room_created", room_name)
-    update_room_list()
+    join_room(room)
+    rooms[room] = {
+        "players": [request.sid],
+        "board": [["" for _ in range(18)] for _ in range(18)],
+        "turn": "X"
+    }
+    emit("room_created", room)
+    emit("room_list", list(rooms.keys()), broadcast=True)
 
 @socketio.on("join_room")
-def join_room_event(data):
-    room_name = data["room"]
-    if room_name in rooms and len(rooms[room_name]) == 1:
-        join_room(room_name)
-        rooms[room_name].append(request.sid)
-        emit("room_joined", room_name)
-        socketio.emit("start_game", room=room_name)
-        update_room_list()
+def handle_join(data):
+    room = data["room"]
+    if room not in rooms or len(rooms[room]["players"]) >= 2:
+        emit("error", "Room tidak tersedia")
+        return
+    join_room(room)
+    rooms[room]["players"].append(request.sid)
+    emit("room_joined", room)
+    socketio.emit("start_game", room=room)
+
+@socketio.on("get_symbol")
+def assign_symbol(data):
+    room = data["room"]
+    if request.sid == rooms[room]["players"][0]:
+        emit("assign_symbol", "X")
     else:
-        emit("error", "Room tidak tersedia atau sudah penuh.")
+        emit("assign_symbol", "O")
 
-@socketio.on("disconnect")
-def handle_disconnect():
-    for room, players in list(rooms.items()):
-        if request.sid in players:
-            players.remove(request.sid)
-            if not players:
-                del rooms[room]
-            update_room_list()
-            break
+@socketio.on("make_move")
+def handle_move(data):
+    room = data["room"]
+    i, j = data["row"], data["col"]
+    game = rooms[room]
+    board = game["board"]
+    if board[i][j] == "":
+        board[i][j] = game["turn"]
+        game["turn"] = "O" if game["turn"] == "X" else "X"
+        socketio.emit("update_board", {"board": board, "nextTurn": game["turn"]}, room=room)
 
-def update_room_list():
-    available_rooms = [room for room, p in rooms.items() if len(p) == 1]
-    socketio.emit("room_list", available_rooms)
-
-if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+if __name__ == '__main__':
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
