@@ -1,70 +1,54 @@
-
 from flask import Flask, render_template
-from flask_socketio import SocketIO, emit, join_room
-import eventlet
-from flask import request
+from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_cors import CORS
+import os
 
 app = Flask(__name__)
-socketio = SocketIO(app, async_mode='eventlet')
+CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
-ROOM = "main_room"
-players = []
-current_turn = "X"
-grid = [["" for _ in range(18)] for _ in range(18)]
+rooms = {}  # {room_name: [sid1, sid2]}
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
-@socketio.on("join")
-def handle_join():
-    global players
-    if len(players) < 2:
-        players.append(request.sid)
-        join_room(ROOM)
-        player_symbol = "X" if len(players) == 1 else "O"
-        emit("player_assigned", player_symbol, room=request.sid)
-        if len(players) == 2:
-            socketio.emit("start_game", room=ROOM)
+@socketio.on("create_room")
+def create_room(data):
+    room_name = data["room"]
+    if room_name in rooms:
+        emit("error", "Room sudah ada.")
+        return
+    join_room(room_name)
+    rooms[room_name] = [request.sid]
+    emit("room_created", room_name)
+    update_room_list()
 
-@socketio.on("move")
-def handle_move(data):
-    global current_turn, grid
-    row, col = data["row"], data["col"]
-    player = data["player"]
+@socketio.on("join_room")
+def join_room_event(data):
+    room_name = data["room"]
+    if room_name in rooms and len(rooms[room_name]) == 1:
+        join_room(room_name)
+        rooms[room_name].append(request.sid)
+        emit("room_joined", room_name)
+        socketio.emit("start_game", room=room_name)
+        update_room_list()
+    else:
+        emit("error", "Room tidak tersedia atau sudah penuh.")
 
-    if grid[row][col] == "" and player == current_turn:
-        grid[row][col] = player
-        socketio.emit("update_cell", {"row": row, "col": col, "player": player}, room=ROOM)
-        
-        if check_win(row, col, player):
-            socketio.emit("game_over", f"{player} wins!", room=ROOM)
-        else:
-            current_turn = "O" if current_turn == "X" else "X"
+@socketio.on("disconnect")
+def handle_disconnect():
+    for room, players in list(rooms.items()):
+        if request.sid in players:
+            players.remove(request.sid)
+            if not players:
+                del rooms[room]
+            update_room_list()
+            break
 
-@socketio.on("reset")
-def handle_reset():
-    global grid, current_turn
-    grid = [["" for _ in range(18)] for _ in range(18)]
-    current_turn = "X"
-    socketio.emit("reset_board", room=ROOM)
-
-def check_win(row, col, player):
-    directions = [(1,0), (0,1), (1,1), (1,-1)]
-    for dx, dy in directions:
-        count = 1
-        for i in range(1, 5):
-            r, c = row + i*dx, col + i*dy
-            if r < 0 or r >= 18 or c < 0 or c >= 18 or grid[r][c] != player: break
-            count += 1
-        for i in range(1, 5):
-            r, c = row - i*dx, col - i*dy
-            if r < 0 or r >= 18 or c < 0 or c >= 18 or grid[r][c] != player: break
-            count += 1
-        if count >= 5:
-            return True
-    return False
-
+def update_room_list():
+    available_rooms = [room for room, p in rooms.items() if len(p) == 1]
+    socketio.emit("room_list", available_rooms)
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000)
+    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
