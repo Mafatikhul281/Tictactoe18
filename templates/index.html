@@ -1,16 +1,26 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Tic Tac Toe 18x18 Online</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Tic Tac Toe 18x18</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; }
+    #gameBoard table { margin: 20px auto; }
+    td:hover { background: #eee; }
+  </style>
 </head>
 <body>
-    <h1>Tic Tac Toe 18x18 Online</h1>
-    <div id="info">Waiting for opponent...</div>
-    <div id="board"></div>
-    <button onclick="resetBoard()">Reset</button>
-    <script src="/static/script.js"></script>
+  <h1>Tic Tac Toe 18x18</h1>
+
+  <input type="text" id="roomInput" placeholder="Nama Room">
+  <button onclick="createRoom()">Buat Room</button>
+
+  <h2>Daftar Room</h2>
+  <div id="roomList"></div>
+
+  <div id="gameBoard"></div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
