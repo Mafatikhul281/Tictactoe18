@@ -1,0 +1,33 @@
+
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(18, 30px);
+    grid-template-rows: repeat(18, 30px);
+    gap: 2px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.cell {
+    width: 30px;
+    height: 30px;
+    background-color: #f2f2f2;
+    border: 1px solid #ccc;
+    font-size: 20px;
+    text-align: center;
+    line-height: 30px;
+    cursor: pointer;
+}
+
+.cell:hover {
+    background-color: #e0e0e0;
+}
+
+.winner {
+    background-color: yellow !important;
+}
