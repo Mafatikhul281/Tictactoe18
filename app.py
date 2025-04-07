@@ -3,6 +3,7 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO, emit, join_room
 import eventlet
 from flask import request
+import os
 
 app = Flask(__name__)
 socketio = SocketIO(app)
