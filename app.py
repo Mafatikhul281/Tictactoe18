@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, join_room, emit
+import random
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -37,9 +38,13 @@ def handle_join(data):
         return
     join_room(room)
     rooms[room]["players"].append(request.sid)
+
+    # Acak urutan pemain (penentu siapa X dan siapa O)
+    random.shuffle(rooms[room]["players"])
+    rooms[room]["turn"] = "X"
+
     emit("room_joined", room)
     socketio.emit("start_game", room=room)
-    del rooms[room]  # Hapus room setelah game dimulai
 
 @socketio.on("get_symbol")
 def assign_symbol(data):
