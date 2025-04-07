@@ -26,7 +26,6 @@ socket.on("room_joined", (room) => {
 
 socket.on("start_game", () => {
   document.getElementById("menu").style.display = "none";
-  playerSymbol = "X";
   socket.emit("get_symbol", { room: roomName });
   document.getElementById("gameBoard").innerHTML = "";
   renderBoard();
