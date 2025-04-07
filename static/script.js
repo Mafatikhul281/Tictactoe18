@@ -25,6 +25,7 @@ socket.on("room_joined", (room) => {
 });
 
 socket.on("start_game", () => {
+  document.getElementById("menu").style.display = "none";
   playerSymbol = "X";
   socket.emit("get_symbol", { room: roomName });
   document.getElementById("gameBoard").innerHTML = "";
@@ -71,12 +72,6 @@ function renderBoard() {
     for (let j = 0; j < 18; j++) {
       const cell = document.createElement("td");
       cell.textContent = board[i][j];
-      cell.style.width = "25px";
-      cell.style.height = "25px";
-      cell.style.border = "1px solid #000";
-      cell.style.textAlign = "center";
-      cell.style.cursor = "pointer";
-      cell.style.fontSize = "18px";
       cell.onclick = () => handleClick(i, j);
       row.appendChild(cell);
     }
